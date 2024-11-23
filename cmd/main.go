@@ -8,6 +8,7 @@ import (
 	"goexpert-list-orders/configs"
 	"goexpert-list-orders/internal/db"
 	grpcDelivery "goexpert-list-orders/internal/delivery/grpc"
+	"goexpert-list-orders/internal/delivery/grpc/pb"
 	"goexpert-list-orders/internal/delivery/rest"
 	"goexpert-list-orders/internal/usecase"
 
@@ -48,7 +49,7 @@ func main() {
 
 		grpcServer := grpc.NewServer()
 		grpcService := &grpcDelivery.Server{ListOrdersUC: listOrdersUC}
-		grpcDelivery.RegisterOrderServiceServer(grpcServer, grpcService)
+		pb.RegisterOrderServiceServer(grpcServer, grpcService)
 
 		log.Println("Servidor gRPC iniciado na porta 50051")
 		log.Fatal(grpcServer.Serve(lis))

@@ -7,7 +7,7 @@ import (
 
 // Define a interface para o repositório de ordens
 type OrderRepository interface {
-	ListOrders(ctx context.Context) ([]domain.Order, error)
+	ListOrders() ([]domain.Order, error)
 }
 
 // Caso de uso para listar ordens

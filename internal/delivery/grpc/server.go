@@ -12,7 +12,7 @@ type Server struct {
 }
 
 func (s *Server) ListOrders(ctx context.Context, req *pb.Empty) (*pb.OrderListResponse, error) {
-	orders, err := s.ListOrdersUC.Execute(ctx)
+	orders, err := s.ListOrdersUC.Execute()
 	if err != nil {
 		return nil, err
 	}
