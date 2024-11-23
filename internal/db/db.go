@@ -1,34 +1,33 @@
 package db
 
 import (
-	"context"
 	"database/sql"
-	"goexpert-list-orders/internal/domain"
+	"fmt"
+	"log"
+	"os"
+
+	_ "github.com/lib/pq"
 )
 
-type Repository struct {
-	db *sql.DB
-}
+func NewDB() (*sql.DB, error) {
+	connStr := fmt.Sprintf(
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"),
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_NAME"),
+	)
 
-func NewRepository(db *sql.DB) *Repository {
-	return &Repository{db: db}
-}
-
-func (r *Repository) FindAll(ctx context.Context) ([]domain.Order, error) {
-	rows, err := r.db.QueryContext(ctx, "SELECT id, customer, total FROM orders")
+	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	var orders []domain.Order
-	for rows.Next() {
-		var order domain.Order
-		if err := rows.Scan(&order.ID, &order.Customer, &order.Total); err != nil {
-			return nil, err
-		}
-		orders = append(orders, order)
+	if err = db.Ping(); err != nil {
+		return nil, err
 	}
 
-	return orders, nil
+	log.Println("Conexão com o banco de dados estabelecida")
+	return db, nil
 }

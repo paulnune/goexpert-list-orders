@@ -11,15 +11,20 @@ type Handler struct {
 	ListOrdersUC *usecase.ListOrdersUseCase
 }
 
+func NewHandler(listOrdersUC *usecase.ListOrdersUseCase) *Handler {
+	return &Handler{ListOrdersUC: listOrdersUC}
+}
+
 func (h *Handler) ListOrders(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context() // Obtém o contexto da requisição
-	orders, err := h.ListOrdersUC.Execute(ctx)
+	orders, err := h.ListOrdersUC.Execute(r.Context())
 	if err != nil {
-		log.Printf("Erro ao listar pedidos: %v", err)
-		http.Error(w, "Erro interno do servidor", http.StatusInternalServerError)
+		http.Error(w, "Erro ao listar pedidos", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(orders)
+	if err := json.NewEncoder(w).Encode(orders); err != nil {
+		log.Printf("Erro ao codificar resposta: %v", err)
+		http.Error(w, "Erro interno", http.StatusInternalServerError)
+	}
 }

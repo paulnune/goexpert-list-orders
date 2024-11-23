@@ -11,20 +11,20 @@ type Server struct {
 	ListOrdersUC *usecase.ListOrdersUseCase
 }
 
-func (s *Server) ListOrders(ctx context.Context, req *pb.ListOrdersRequest) (*pb.ListOrdersResponse, error) {
+func (s *Server) ListOrders(ctx context.Context, req *pb.Empty) (*pb.OrderListResponse, error) {
 	orders, err := s.ListOrdersUC.Execute(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	var grpcOrders []*pb.Order
+	var pbOrders []*pb.Order
 	for _, order := range orders {
-		grpcOrders = append(grpcOrders, &pb.Order{
+		pbOrders = append(pbOrders, &pb.Order{
 			Id:       order.ID,
 			Customer: order.Customer,
-			Total:    order.Total,
+			Total:    float32(order.Total),
 		})
 	}
 
-	return &pb.ListOrdersResponse{Orders: grpcOrders}, nil
+	return &pb.OrderListResponse{Orders: pbOrders}, nil
 }

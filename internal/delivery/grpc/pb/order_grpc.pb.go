@@ -26,7 +26,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type OrderServiceClient interface {
-	ListOrders(ctx context.Context, in *OrderRequest, opts ...grpc.CallOption) (*OrderResponse, error)
+	ListOrders(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*OrderListResponse, error)
 }
 
 type orderServiceClient struct {
@@ -37,9 +37,9 @@ func NewOrderServiceClient(cc grpc.ClientConnInterface) OrderServiceClient {
 	return &orderServiceClient{cc}
 }
 
-func (c *orderServiceClient) ListOrders(ctx context.Context, in *OrderRequest, opts ...grpc.CallOption) (*OrderResponse, error) {
+func (c *orderServiceClient) ListOrders(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*OrderListResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(OrderResponse)
+	out := new(OrderListResponse)
 	err := c.cc.Invoke(ctx, OrderService_ListOrders_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func (c *orderServiceClient) ListOrders(ctx context.Context, in *OrderRequest, o
 // All implementations must embed UnimplementedOrderServiceServer
 // for forward compatibility.
 type OrderServiceServer interface {
-	ListOrders(context.Context, *OrderRequest) (*OrderResponse, error)
+	ListOrders(context.Context, *Empty) (*OrderListResponse, error)
 	mustEmbedUnimplementedOrderServiceServer()
 }
 
@@ -62,7 +62,7 @@ type OrderServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedOrderServiceServer struct{}
 
-func (UnimplementedOrderServiceServer) ListOrders(context.Context, *OrderRequest) (*OrderResponse, error) {
+func (UnimplementedOrderServiceServer) ListOrders(context.Context, *Empty) (*OrderListResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListOrders not implemented")
 }
 func (UnimplementedOrderServiceServer) mustEmbedUnimplementedOrderServiceServer() {}
@@ -87,7 +87,7 @@ func RegisterOrderServiceServer(s grpc.ServiceRegistrar, srv OrderServiceServer)
 }
 
 func _OrderService_ListOrders_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(OrderRequest)
+	in := new(Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func _OrderService_ListOrders_Handler(srv interface{}, ctx context.Context, dec 
 		FullMethod: OrderService_ListOrders_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(OrderServiceServer).ListOrders(ctx, req.(*OrderRequest))
+		return srv.(OrderServiceServer).ListOrders(ctx, req.(*Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }

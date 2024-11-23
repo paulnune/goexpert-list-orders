@@ -2,20 +2,20 @@ syntax = "proto3";
 
 package pb;
 
-option go_package = "goexpert-list-orders/internal/delivery/grpc/pb";
+option go_package = "internal/delivery/grpc/pb";
 
-service OrderService {
-    rpc ListOrders (OrderRequest) returns (OrderResponse);
-}
-
-message OrderRequest {}
-
-message OrderResponse {
-    repeated Order orders = 1;
-}
+message Empty {}
 
 message Order {
-    string id = 1;
-    string customer = 2;
-    double total = 3;
+  int64 id = 1;
+  string customer = 2;
+  float total = 3;
+}
+
+message OrderListResponse {
+  repeated Order orders = 1;
+}
+
+service OrderService {
+  rpc ListOrders (Empty) returns (OrderListResponse);
 }
