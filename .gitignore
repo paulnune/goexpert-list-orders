@@ -1,0 +1,32 @@
+# Binaries for programs and plugins
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.o
+*.out
+main
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp
+
+# Go specific
+/bin/
+/pkg/
+/vendor/
+
+# Dependency directories (remove the comment below if you use vendoring)
+# /vendor/
+
+# IDE and editor-specific files
+.idea/
+.vscode/
+*.iml
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
