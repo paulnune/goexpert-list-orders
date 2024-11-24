@@ -44,4 +44,8 @@ FROM debian:bookworm-slim AS app
 WORKDIR /app
 
 COPY --from=builder /app/main .
+
+# Expor portas necessárias para a aplicação
+EXPOSE 8080 50051
+
 CMD ["./main"]
