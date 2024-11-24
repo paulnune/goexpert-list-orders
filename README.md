@@ -94,7 +94,7 @@ Para a criação do banco de dados, utilize o Docker ou Podman (`Dockerfile` / `
 
 2. Configure o projeto Go:
    ```bash
-   go mod init github.com/paulnune/goexpert-list-orders
+   go mod init goexpert-list-orders
    go mod tidy
    ```
 
