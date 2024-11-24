@@ -2,6 +2,7 @@ package rest
 
 import (
 	"encoding/json"
+	"goexpert-list-orders/internal/domain"
 	"goexpert-list-orders/internal/usecase"
 	"log"
 	"net/http"
@@ -27,4 +28,22 @@ func (h *Handler) ListOrders(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Erro ao codificar resposta: %v", err)
 		http.Error(w, "Erro interno", http.StatusInternalServerError)
 	}
+}
+
+func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
+	var order domain.Order
+	if err := json.NewDecoder(r.Body).Decode(&order); err != nil {
+		http.Error(w, "Payload inválido", http.StatusBadRequest)
+		return
+	}
+
+	id, err := h.ListOrdersUC.CreateOrder(r.Context(), order)
+	if err != nil {
+		http.Error(w, "Erro ao criar pedido", http.StatusInternalServerError)
+		return
+	}
+
+	order.ID = id
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(order)
 }

@@ -2,32 +2,25 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"time"
 
-	_ "github.com/lib/pq" // Importa o driver PostgreSQL
+	"goexpert-list-orders/internal/db"
+	grpcService "goexpert-list-orders/internal/delivery/grpc"
+	pb "goexpert-list-orders/internal/delivery/grpc/pb"
+	"goexpert-list-orders/internal/delivery/rest"
+	"goexpert-list-orders/internal/usecase"
+
+	_ "github.com/lib/pq" // Driver PostgreSQL
+	"google.golang.org/grpc"
 )
 
-// Order representa a estrutura de um pedido
-type Order struct {
-	ID       int     `json:"id"`
-	Customer string  `json:"customer"`
-	Total    float64 `json:"total"`
-}
-
 func main() {
-	// Exibir as variáveis de ambiente carregadas
-	fmt.Printf("DB_HOST: %s\n", os.Getenv("DB_HOST"))
-	fmt.Printf("DB_PORT: %s\n", os.Getenv("DB_PORT"))
-	fmt.Printf("DB_USER: %s\n", os.Getenv("DB_USER"))
-	fmt.Printf("DB_PASSWORD: %s\n", os.Getenv("DB_PASSWORD"))
-	fmt.Printf("DB_NAME: %s\n", os.Getenv("DB_NAME"))
-
-	// Montar a string de conexão com o banco de dados
+	// Configuração da string de conexão
 	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		os.Getenv("DB_HOST"),
 		os.Getenv("DB_PORT"),
@@ -35,74 +28,66 @@ func main() {
 		os.Getenv("DB_PASSWORD"),
 		os.Getenv("DB_NAME"),
 	)
-	fmt.Printf("String de conexão: %s\n", connStr)
 
-	// Retry na conexão ao banco de dados
-	var db *sql.DB
+	// Conexão com o banco de dados
+	dbConn, err := connectToDB(connStr)
+	if err != nil {
+		log.Fatalf("Erro ao conectar ao banco de dados: %v", err)
+	}
+	defer dbConn.Close()
+
+	// Inicialização do repositório, caso de uso e handlers
+	repo := db.NewOrderRepository(dbConn)
+	listOrdersUC := usecase.NewListOrdersUseCase(repo)
+	restHandler := rest.NewHandler(listOrdersUC)
+	grpcHandler := grpcService.NewServer(listOrdersUC)
+
+	// Inicializar servidores
+	go startRESTServer(restHandler)
+	startGRPCServer(grpcHandler)
+}
+
+// Conecta ao banco de dados com tentativas de retry
+func connectToDB(connStr string) (*sql.DB, error) {
+	var dbConn *sql.DB
 	var err error
 	for retries := 0; retries < 10; retries++ {
-		db, err = sql.Open("postgres", connStr)
+		dbConn, err = sql.Open("postgres", connStr)
 		if err == nil {
-			err = db.Ping()
+			err = dbConn.Ping()
 			if err == nil {
 				fmt.Println("Conexão com o banco de dados bem-sucedida!")
-				break
+				return dbConn, nil
 			}
 		}
 		fmt.Printf("Erro ao conectar: %v. Tentando novamente...\n", err)
 		time.Sleep(5 * time.Second)
 	}
+	return nil, fmt.Errorf("não foi possível conectar ao banco de dados após várias tentativas: %v", err)
+}
 
-	if err != nil {
-		log.Fatalf("Não foi possível conectar ao banco de dados após várias tentativas: %v", err)
-	}
-	defer db.Close()
-
-	// Configuração das rotas
-	http.HandleFunc("/orders", func(w http.ResponseWriter, r *http.Request) {
-		// Configurar cabeçalhos para JSON
-		w.Header().Set("Content-Type", "application/json")
-
-		// Obter a lista de pedidos
-		orders, err := listOrders(db)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Erro ao buscar pedidos: %v", err), http.StatusInternalServerError)
-			return
-		}
-
-		// Retornar a lista como JSON
-		json.NewEncoder(w).Encode(orders)
-	})
-
+// Inicializa o servidor REST
+func startRESTServer(handler *rest.Handler) {
+	http.HandleFunc("/orders", handler.ListOrders)
+	http.HandleFunc("/order", handler.CreateOrder)
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
 
-	// Iniciar o servidor HTTP
-	port := "8080"
-	fmt.Printf("Servidor rodando na porta %s\n", port)
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
-		log.Fatalf("Erro ao iniciar o servidor HTTP: %v", err)
-	}
+	fmt.Println("Servidor REST rodando na porta 8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-// listOrders consulta a tabela de pedidos no banco de dados
-func listOrders(db *sql.DB) ([]Order, error) {
-	rows, err := db.Query("SELECT id, customer, total FROM orders")
+// Inicializa o servidor gRPC
+func startGRPCServer(grpcHandler pb.OrderServiceServer) {
+	lis, err := net.Listen("tcp", ":50051")
 	if err != nil {
-		return nil, fmt.Errorf("erro ao executar a consulta: %v. Verifique se a tabela 'orders' existe.", err)
+		log.Fatalf("Falha ao iniciar o servidor gRPC: %v", err)
 	}
-	defer rows.Close()
+	grpcServer := grpc.NewServer()
+	pb.RegisterOrderServiceServer(grpcServer, grpcHandler)
 
-	var orders []Order
-	for rows.Next() {
-		var order Order
-		if err := rows.Scan(&order.ID, &order.Customer, &order.Total); err != nil {
-			return nil, fmt.Errorf("erro ao ler os resultados: %v", err)
-		}
-		orders = append(orders, order)
-	}
-
-	return orders, nil
+	fmt.Println("Servidor gRPC rodando na porta 50051")
+	log.Fatal(grpcServer.Serve(lis))
 }

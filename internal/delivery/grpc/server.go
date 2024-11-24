@@ -11,8 +11,12 @@ type Server struct {
 	ListOrdersUC *usecase.ListOrdersUseCase
 }
 
+func NewServer(listOrdersUC *usecase.ListOrdersUseCase) *Server {
+	return &Server{ListOrdersUC: listOrdersUC}
+}
+
 func (s *Server) ListOrders(ctx context.Context, req *pb.Empty) (*pb.OrderListResponse, error) {
-	orders, err := s.ListOrdersUC.Execute()
+	orders, err := s.ListOrdersUC.Execute(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -20,7 +24,7 @@ func (s *Server) ListOrders(ctx context.Context, req *pb.Empty) (*pb.OrderListRe
 	var pbOrders []*pb.Order
 	for _, order := range orders {
 		pbOrders = append(pbOrders, &pb.Order{
-			Id:       order.ID,
+			Id:       int64(order.ID), // Correção aqui: conversão explícita para int64
 			Customer: order.Customer,
 			Total:    float32(order.Total),
 		})

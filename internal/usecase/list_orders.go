@@ -2,25 +2,22 @@ package usecase
 
 import (
 	"context"
+	"goexpert-list-orders/internal/db"
 	"goexpert-list-orders/internal/domain"
 )
 
-type OrderRepository interface {
-	ListOrders(ctx context.Context) ([]domain.Order, error)
-}
-
 type ListOrdersUseCase struct {
-	Repo OrderRepository
+	repository *db.OrderRepository
 }
 
-func NewListOrdersUseCase(repo OrderRepository) *ListOrdersUseCase {
-	return &ListOrdersUseCase{Repo: repo}
+func NewListOrdersUseCase(repository *db.OrderRepository) *ListOrdersUseCase {
+	return &ListOrdersUseCase{repository: repository}
 }
 
 func (uc *ListOrdersUseCase) Execute(ctx context.Context) ([]domain.Order, error) {
-	orders, err := uc.Repo.ListOrders(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return orders, nil
+	return uc.repository.ListOrders(ctx)
+}
+
+func (uc *ListOrdersUseCase) CreateOrder(ctx context.Context, order domain.Order) (int, error) {
+	return uc.repository.CreateOrder(ctx, order)
 }

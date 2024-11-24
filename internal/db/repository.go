@@ -31,3 +31,10 @@ func (r *OrderRepository) ListOrders(ctx context.Context) ([]domain.Order, error
 	}
 	return orders, nil
 }
+
+func (r *OrderRepository) CreateOrder(ctx context.Context, order domain.Order) (int, error) {
+	query := "INSERT INTO orders (customer, total) VALUES ($1, $2) RETURNING id"
+	var id int
+	err := r.DB.QueryRowContext(ctx, query, order.Customer, order.Total).Scan(&id)
+	return id, err
+}
