@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"goexpert-list-orders/internal/domain"
 )
@@ -13,8 +14,8 @@ func NewOrderRepository(db *sql.DB) *OrderRepository {
 	return &OrderRepository{DB: db}
 }
 
-func (r *OrderRepository) ListOrders() ([]domain.Order, error) {
-	rows, err := r.DB.Query("SELECT id, customer, total FROM orders")
+func (r *OrderRepository) ListOrders(ctx context.Context) ([]domain.Order, error) {
+	rows, err := r.DB.QueryContext(ctx, "SELECT id, customer, total FROM orders")
 	if err != nil {
 		return nil, err
 	}

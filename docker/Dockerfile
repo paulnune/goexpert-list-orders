@@ -1,31 +1,47 @@
+# Etapa de build
 FROM golang:1.23 AS builder
+
 WORKDIR /app
 
-# Instala o protoc e seus plugins
+# Instalar Protoc e Go Plugins
 RUN apt-get update && apt-get install -y protobuf-compiler
-
-# Instala os plugins para Go e gRPC
 RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest \
     && go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
-# Adiciona o diretório GOPATH/bin ao PATH
 ENV PATH="$PATH:/go/bin"
 
-# Copia os arquivos de dependências
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copia o restante do código
 COPY . ./
 
-# Gera os arquivos gRPC
+# Gerar arquivos gRPC
 RUN protoc --go_out=. --go-grpc_out=. internal/delivery/grpc/order.proto
 
-# Compila a aplicação
+# Build da aplicação
 RUN go build -o main cmd/main.go
 
-# Imagem final minimalista
-FROM gcr.io/distroless/base
-WORKDIR /
+# Etapa de banco de dados
+FROM postgres:14 AS db
+
+# Copiar o script init.sql
+COPY init.sql /docker-entrypoint-initdb.d/init.sql
+
+# Configuração do banco
+ENV POSTGRES_USER=user
+ENV POSTGRES_PASSWORD=password
+ENV POSTGRES_DB=orders
+
+# Garantir permissões no init.sql
+RUN chmod 644 /docker-entrypoint-initdb.d/init.sql
+
+# Expor a porta padrão
+EXPOSE 5432
+
+# Etapa de aplicação
+FROM debian:bookworm-slim AS app
+
+WORKDIR /app
+
 COPY --from=builder /app/main .
 CMD ["./main"]

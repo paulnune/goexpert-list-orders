@@ -5,16 +5,22 @@ import (
 	"goexpert-list-orders/internal/domain"
 )
 
-// Define a interface para o repositório de ordens
 type OrderRepository interface {
-	ListOrders() ([]domain.Order, error)
+	ListOrders(ctx context.Context) ([]domain.Order, error)
 }
 
-// Caso de uso para listar ordens
 type ListOrdersUseCase struct {
 	Repo OrderRepository
 }
 
+func NewListOrdersUseCase(repo OrderRepository) *ListOrdersUseCase {
+	return &ListOrdersUseCase{Repo: repo}
+}
+
 func (uc *ListOrdersUseCase) Execute(ctx context.Context) ([]domain.Order, error) {
-	return uc.Repo.ListOrders(ctx)
+	orders, err := uc.Repo.ListOrders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return orders, nil
 }

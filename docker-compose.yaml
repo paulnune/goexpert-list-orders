@@ -1,20 +1,30 @@
+version: "3.8"
+
 services:
   db:
-    image: postgres:14
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile
+      target: db
     container_name: order-db
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: orders
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d orders"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
       - db_data:/var/lib/postgresql/data
+    networks:
+      - app-network
 
   app:
     build:
       context: .
       dockerfile: ./docker/Dockerfile
+      target: app
+    container_name: goexpert-list-orders_app_1
     ports:
       - "8080:8080"
       - "50051:50051"
@@ -25,7 +35,14 @@ services:
       DB_PASSWORD: password
       DB_NAME: orders
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
 
 volumes:
   db_data:
+
+networks:
+  app-network:
+    driver: bridge
