@@ -2,13 +2,22 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"time"
 
 	_ "github.com/lib/pq" // Importa o driver PostgreSQL
 )
+
+// Order representa a estrutura de um pedido
+type Order struct {
+	ID       int     `json:"id"`
+	Customer string  `json:"customer"`
+	Total    float64 `json:"total"`
+}
 
 func main() {
 	// Exibir as variáveis de ambiente carregadas
@@ -49,59 +58,49 @@ func main() {
 	}
 	defer db.Close()
 
-	// Exibir tabelas disponíveis no banco
-	checkTables(db)
+	// Configuração das rotas
+	http.HandleFunc("/orders", func(w http.ResponseWriter, r *http.Request) {
+		// Configurar cabeçalhos para JSON
+		w.Header().Set("Content-Type", "application/json")
 
-	// Lógica principal
-	listOrders(db)
-}
-
-// Função para verificar tabelas disponíveis
-func checkTables(db *sql.DB) {
-	rows, err := db.Query("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public'")
-	if err != nil {
-		log.Fatalf("Erro ao listar tabelas: %v", err)
-	}
-	defer rows.Close()
-
-	fmt.Println("Tabelas disponíveis no banco de dados:")
-	for rows.Next() {
-		var tableName string
-		if err := rows.Scan(&tableName); err != nil {
-			log.Fatalf("Erro ao ler tabelas: %v", err)
+		// Obter a lista de pedidos
+		orders, err := listOrders(db)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Erro ao buscar pedidos: %v", err), http.StatusInternalServerError)
+			return
 		}
-		fmt.Printf("- %s\n", tableName)
-	}
-	fmt.Println("Fim da listagem de tabelas.")
+
+		// Retornar a lista como JSON
+		json.NewEncoder(w).Encode(orders)
+	})
+
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
+
+	// Iniciar o servidor HTTP
+	port := "8080"
+	fmt.Printf("Servidor rodando na porta %s\n", port)
+	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
 
-// Função para listar pedidos no banco de dados
-func listOrders(db *sql.DB) {
+// listOrders consulta a tabela de pedidos no banco de dados
+func listOrders(db *sql.DB) ([]Order, error) {
 	rows, err := db.Query("SELECT id, customer, total FROM orders")
 	if err != nil {
-		log.Fatalf("Erro ao executar a consulta: %v. Verifique se a tabela 'orders' existe.", err)
+		return nil, fmt.Errorf("erro ao executar a consulta: %v. Verifique se a tabela 'orders' existe.", err)
 	}
 	defer rows.Close()
 
-	fmt.Println("Pedidos:")
-	hasRows := false
+	var orders []Order
 	for rows.Next() {
-		var id int
-		var customer string
-		var total float64
-
-		err := rows.Scan(&id, &customer, &total)
-		if err != nil {
-			log.Fatalf("Erro ao ler os resultados: %v", err)
+		var order Order
+		if err := rows.Scan(&order.ID, &order.Customer, &order.Total); err != nil {
+			return nil, fmt.Errorf("erro ao ler os resultados: %v", err)
 		}
-		fmt.Printf("ID: %d, Cliente: %s, Total: %.2f\n", id, customer, total)
-		hasRows = true
+		orders = append(orders, order)
 	}
 
-	if !hasRows {
-		fmt.Println("Nenhum pedido encontrado.")
-	}
-
-	// Confirmar que o loop foi concluído
-	fmt.Println("Fim da listagem de pedidos.")
+	return orders, nil
 }
