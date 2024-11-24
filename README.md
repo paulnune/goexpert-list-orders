@@ -125,9 +125,10 @@ Para a criação do banco de dados, utilize o Docker ou Podman (`Dockerfile` / `
 ### Caso Bem-sucedido
 
 ```
-Pedidos:
-ID: 1, Cliente: John Doe, Total: 123.45
-Fim da listagem de pedidos.
+[app] | Conexão com o banco de dados bem-sucedida!
+[app] | Pedidos:
+[app] | ID: 1, Cliente: John Doe, Total: 123.45
+[app] | Fim da listagem de pedidos.
 ```
 
 ---
