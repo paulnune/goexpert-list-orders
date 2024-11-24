@@ -82,7 +82,9 @@ func main() {
 	// Iniciar o servidor HTTP
 	port := "8080"
 	fmt.Printf("Servidor rodando na porta %s\n", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
+		log.Fatalf("Erro ao iniciar o servidor HTTP: %v", err)
+	}
 }
 
 // listOrders consulta a tabela de pedidos no banco de dados
